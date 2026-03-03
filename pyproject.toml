@@ -1,0 +1,51 @@
+[project]
+name = "gitter-colony"
+version = "1.1.4"
+description = "Python port of the gitter colony quantification pipeline."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+authors = [
+  { name = "Stefan" },
+]
+license = { text = "LGPL-3.0-or-later" }
+dependencies = [
+  "numpy>=2.2.0",
+  "pandas>=2.2.0",
+  "scipy>=1.15.0",
+  "scikit-image>=0.25.0",
+  "matplotlib>=3.10.0",
+  "seaborn>=0.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "ruff>=0.9.0",
+]
+docs = [
+  "zensical==0.0.24",
+]
+
+[project.scripts]
+gitter = "gitter_py.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gitter_py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+  "r_live: runs live R parity comparison in Docker",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

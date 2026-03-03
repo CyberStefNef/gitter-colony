@@ -1,0 +1,9 @@
+.DS_Store
+build/gitter.Rcheck
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.cache/
+site/
+r_gitter/

@@ -1,0 +1,29 @@
+[project]
+site_name = "gitter-colony"
+site_url = "https://cyberstefnef.github.io/gitter-colony/"
+site_description = "Python rewrite of gitter for colony quantification"
+repo_url = "https://github.com/CyberStefNef/gitter-colony"
+repo_name = "CyberStefNef/gitter-colony"
+docs_dir = "docs"
+site_dir = "site"
+nav = [
+  { Home = "index.md" },
+  { Installation = "installation.md" },
+  { "Quick Start" = "quickstart.md" },
+  { "Python API" = "python-api.md" },
+  { Plotting = "plotting.md" },
+  { "Reference Image Workflow" = "reference-image-workflow.md" },
+  { "Parity Validation" = "parity-validation.md" },
+  { "CLI (Optional)" = "cli.md" },
+  { Citation = "citation.md" },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "navigation.sections",
+  "navigation.top",
+  "search.suggest",
+  "search.highlight",
+  "content.code.copy",
+]
