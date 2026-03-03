@@ -1,6 +1,6 @@
 [project]
 name = "gitter-colony"
-version = "1.1.4"
+version = "1.2.0"
 description = "Python port of the gitter colony quantification pipeline."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
