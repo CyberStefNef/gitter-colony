@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import math
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
@@ -18,14 +17,6 @@ from .constants import GITTER_VERSION, PLATE_FORMATS
 from .io import gitter_write
 from .peaks import colony_peaks, colony_peaks_fixed, round_odd, split_half
 from .plate_crops import orient_crop, validate_rotate_override
-from .plate_detection import (
-    PlateBox,
-    PlateDetections,
-    PlateDetector,
-    _to_saveable_u8,
-    extract_plate_crop,
-    save_split_artifacts,
-)
 
 LOGGER = logging.getLogger("gitter")
 if not LOGGER.handlers:
@@ -34,23 +25,6 @@ if not LOGGER.handlers:
     handler.setFormatter(formatter)
     LOGGER.addHandler(handler)
     LOGGER.setLevel(logging.INFO)
-
-
-_DEFAULT_DETECTOR_ATTEMPTED = False
-_DEFAULT_DETECTOR_INSTANCE: PlateDetector | None = None
-
-
-def _get_default_plate_detector() -> PlateDetector | None:
-    global _DEFAULT_DETECTOR_ATTEMPTED, _DEFAULT_DETECTOR_INSTANCE
-    if _DEFAULT_DETECTOR_ATTEMPTED:
-        return _DEFAULT_DETECTOR_INSTANCE
-    _DEFAULT_DETECTOR_ATTEMPTED = True
-    try:
-        _DEFAULT_DETECTOR_INSTANCE = PlateDetector()
-    except Exception as exc:
-        LOGGER.info("Default plate detector unavailable: %s", exc)
-        _DEFAULT_DETECTOR_INSTANCE = None
-    return _DEFAULT_DETECTOR_INSTANCE
 
 
 def _resize_by_width(image: np.ndarray, width: int) -> np.ndarray:
@@ -76,6 +50,15 @@ def _read_image(file_path: str | Path) -> np.ndarray:
     image = skio.imread(file_path)
     image = util.img_as_float(image).astype(float)
     return image
+
+
+def _coerce_image_input(image_file: str | Path | np.ndarray) -> tuple[np.ndarray, str, str | None]:
+    if isinstance(image_file, np.ndarray):
+        image = util.img_as_float(np.asarray(image_file)).astype(float)
+        return image, "image", None
+    image_path = Path(image_file)
+    image = _read_image(image_path)
+    return image, image_path.name, str(image_path)
 
 
 def _set_contrast(image: np.ndarray, contrast: float = 10.0) -> np.ndarray:
@@ -442,29 +425,8 @@ def _timestamp() -> str:
     return datetime.now().strftime("%a %b %d %H:%M:%S %Y")
 
 
-def _clip_plate_polygon(
-    polygon: tuple[tuple[float, float], ...] | None,
-    *,
-    width: int,
-    height: int,
-) -> tuple[tuple[float, float], ...] | None:
-    if polygon is None:
-        return None
-    if width <= 0 or height <= 0:
-        return None
-    clipped: list[tuple[float, float]] = []
-    for x, y in polygon:
-        clipped.append(
-            (
-                float(np.clip(x, 0.0, max(width - 1, 0))),
-                float(np.clip(y, 0.0, max(height - 1, 0))),
-            )
-        )
-    return tuple(clipped)
-
-
 def gitter(
-    image_file: str,
+    image_file: str | Path | np.ndarray,
     plate_format: int | tuple[int, int] | list[int] = (32, 48),
     remove_noise: bool = False,
     autorotate: bool = False,
@@ -479,17 +441,12 @@ def gitter(
     start_coords: tuple[float, float] | list[float] | None = None,
     increment_coords: tuple[float, float] | list[float] | None = None,
     dilation_factor: int = 0,
-    plate_detector: PlateDetector | None = None,
-    split_min_confidence: float = 0.95,
-    split_on_low_confidence: str = "skip_save_layout",
-    split_save: str | None = None,
     rotate: bool = False,
     rotate_override: int | None = None,
     _fx: float = 2.0,
     _is_ref: bool = False,
     _params: dict[str, Any] | None = None,
-    _auto_plate_detector: bool = True,
-) -> pd.DataFrame | list[pd.DataFrame]:
+) -> pd.DataFrame:
     if start_coords is not None:
         if len(start_coords) != 2:
             raise ValueError("start.coords must be a numeric vector of length 2")
@@ -510,27 +467,14 @@ def gitter(
         raise ValueError("Fast resize width must be between 1500-4000px")
     rotate_override = validate_rotate_override(rotate_override)
     should_auto_landscape = bool(autorotate or rotate)
-    if split_min_confidence < 0.0 or split_min_confidence > 1.0:
-        raise ValueError("split_min_confidence must be between 0.0 and 1.0")
-    if split_on_low_confidence not in {"skip_save_layout", "error", "best_effort"}:
-        raise ValueError(
-            'split_on_low_confidence must be one of: "skip_save_layout", "error", "best_effort"'
-        )
-    if plate_detector is not None and _is_ref:
-        raise ValueError("plate detection cannot be used for internal reference-image calls")
-    if plate_detector is not None and _params is not None:
-        raise ValueError("plate detection cannot be combined with precomputed alignment parameters")
-    if plate_detector is None and _auto_plate_detector and _params is None and not _is_ref:
-        plate_detector = _get_default_plate_detector()
 
     plate_rows, plate_cols = _parse_plate_format(plate_format)
     if grid_save is not None and not Path(grid_save).is_dir():
         raise ValueError(f'Invalid gridded directory "{grid_save}"')
     if dat_save is not None and not Path(dat_save).is_dir():
         raise ValueError(f'Invalid dat directory "{dat_save}"')
-    if split_save is not None:
-        Path(split_save).mkdir(parents=True, exist_ok=True)
-    if Path(image_file).name.startswith("gridded"):
+    image, source_name, source_file = _coerce_image_input(image_file)
+    if source_name.startswith("gridded_"):
         LOGGER.warning("Detected gridded image as input")
 
     if verbose == "l":
@@ -538,228 +482,9 @@ def gitter(
     else:
         LOGGER.setLevel(logging.ERROR)
     if verbose == "p":
-        print(f"Processing {Path(image_file).name} ...")
-
-    if plate_detector is not None:
-        source_name = Path(image_file).name
-        source_image_raw = _read_image(image_file)
-        detections: PlateDetections = plate_detector.detect(source_image_raw)
-        boxes = detections.boxes
-        if len(boxes) == 0:
-            raise ValueError("No valid plate regions detected")
-
-        h, w = detections.source_image.shape[:2]
-        valid_boxes: list[PlateBox] = []
-        for box in boxes:
-            x_min = int(np.clip(box.x_min, 0, w - 1))
-            x_max = int(np.clip(box.x_max, 0, w - 1))
-            y_min = int(np.clip(box.y_min, 0, h - 1))
-            y_max = int(np.clip(box.y_max, 0, h - 1))
-            if x_max <= x_min or y_max <= y_min:
-                continue
-            valid_boxes.append(
-                PlateBox(
-                    x_min=x_min,
-                    x_max=x_max,
-                    y_min=y_min,
-                    y_max=y_max,
-                    confidence=float(box.confidence),
-                    label=box.label,
-                    polygon=_clip_plate_polygon(box.polygon, width=w, height=h),
-                )
-            )
-        if len(valid_boxes) == 0:
-            raise ValueError("No valid plate regions detected")
-
-        detected_conf = float(max((box.confidence for box in valid_boxes), default=0.0))
-        extractable_boxes = [
-            box for box in valid_boxes if float(box.confidence) >= split_min_confidence
-        ]
-        is_low_confidence = len(extractable_boxes) == 0
-        low_conf_mode = split_on_low_confidence
-        if is_low_confidence and low_conf_mode == "error":
-            raise ValueError(
-                "No plate regions met the extraction confidence threshold "
-                f"({detected_conf:.3f} < {split_min_confidence:.3f})"
-            )
-        if (
-            is_low_confidence
-            and low_conf_mode == "skip_save_layout"
-            and split_save is None
-        ):
-            raise ValueError(
-                "split_save directory is required when split_on_low_confidence='skip_save_layout'"
-            )
-
-        outputs: list[pd.DataFrame] = []
-        extracted_crops: list[np.ndarray] = []
-        crop_rotations: list[int] = []
-        saved_boxes: list[PlateBox] = []
-        for plate_index, box in enumerate(extractable_boxes, start=1):
-            x_min = max(0, box.x_min)
-            x_max = min(w - 1, box.x_max)
-            y_min = max(0, box.y_min)
-            y_max = min(h - 1, box.y_max)
-            crop = extract_plate_crop(detections.source_image, box)
-            if crop.size == 0:
-                continue
-            crop, crop_rotation_degrees = orient_crop(
-                crop,
-                rotate=should_auto_landscape,
-                rotate_override=rotate_override,
-            )
-            extracted_crops.append(crop)
-            crop_rotations.append(crop_rotation_degrees)
-            saved_boxes.append(
-                PlateBox(
-                    x_min=x_min,
-                    x_max=x_max,
-                    y_min=y_min,
-                    y_max=y_max,
-                    confidence=box.confidence,
-                    label=box.label,
-                    polygon=box.polygon,
-                )
-            )
-
-            plate_inverse_modes = [inverse]
-            if (not inverse) not in plate_inverse_modes:
-                plate_inverse_modes.append(not inverse)
-            plate_result: pd.DataFrame | None = None
-            last_plate_exc: Exception | None = None
-            used_inverse = inverse
-            with tempfile.NamedTemporaryFile(
-                suffix=f"_{source_name}__plate_{plate_index:02d}.tiff",
-                delete=False,
-            ) as tmp:
-                tmp_plate_path = Path(tmp.name)
-            try:
-                skio.imsave(tmp_plate_path, _to_saveable_u8(crop))
-                for inverse_mode in plate_inverse_modes:
-                    try:
-                        current = gitter(
-                            image_file=str(tmp_plate_path),
-                            plate_format=plate_format,
-                            remove_noise=remove_noise,
-                            autorotate=False,
-                            inverse=inverse_mode,
-                            image_align=image_align,
-                            verbose=verbose,
-                            contrast=contrast,
-                            fast=fast,
-                            plot=plot,
-                            grid_save=grid_save,
-                            dat_save=None,
-                            start_coords=start_coords,
-                            increment_coords=increment_coords,
-                            dilation_factor=dilation_factor,
-                            plate_detector=None,
-                            split_save=None,
-                            rotate=False,
-                            rotate_override=None,
-                            _fx=_fx,
-                            _is_ref=False,
-                            _params=None,
-                            _auto_plate_detector=False,
-                        )
-                        if not isinstance(current, pd.DataFrame):
-                            raise ValueError("Unexpected plate output")
-                        plate_result = current
-                        used_inverse = inverse_mode
-                        break
-                    except Exception as exc:
-                        last_plate_exc = exc
-            finally:
-                tmp_plate_path.unlink(missing_ok=True)
-
-            if plate_result is None:
-                if last_plate_exc is not None:
-                    raise last_plate_exc
-                raise ValueError("Plate processing failed")
-
-            plate_result.attrs["source_file"] = image_file
-            plate_result.attrs["source_rotation_degrees"] = detections.source_rotation_degrees
-            plate_result.attrs["crop_rotation_degrees"] = crop_rotation_degrees
-            plate_result.attrs["plate_inverse"] = used_inverse
-            plate_result.attrs["plate_index"] = plate_index
-            plate_result.attrs["detected_plate_count"] = len(extractable_boxes)
-            plate_result.attrs["detector_name"] = detections.detector_name
-            plate_result.attrs["detector_version"] = detections.detector_version
-            plate_result.attrs["plate_confidence"] = box.confidence
-            plate_result.attrs["overall_detection_confidence"] = detected_conf
-            plate_result.attrs["plate_bbox"] = {
-                "x_min": x_min,
-                "x_max": x_max,
-                "y_min": y_min,
-                "y_max": y_max,
-            }
-            plate_result.attrs["plate_polygon"] = (
-                [
-                    {"x": float(x), "y": float(y)}
-                    for x, y in box.polygon
-                ]
-                if box.polygon is not None
-                else None
-            )
-            plate_result.attrs["call"] = (
-                f"gitter({image_file!r}, plate_detector={type(plate_detector).__name__})"
-            )
-            plate_result.attrs["file"] = image_file
-
-            if dat_save is not None:
-                out_dat = Path(dat_save) / f"{source_name}__plate_{plate_index:02d}.dat"
-                dat_ready = plate_result.copy()
-                dat_ready["circularity"] = dat_ready["circularity"].round(4)
-                dat_ready = dat_ready[["row", "col", "size", "circularity", "flags"]]
-                dat_ready = gitter_write(dat_ready, out_dat)
-                dat_ready.attrs.update(plate_result.attrs)
-                plate_result = dat_ready
-
-            outputs.append(plate_result)
-
-        if split_save is not None:
-            artifact_boxes: list[PlateBox]
-            artifact_crops: list[np.ndarray | None]
-            artifact_crop_rotations: list[int | None]
-            if is_low_confidence and low_conf_mode == "skip_save_layout":
-                artifact_boxes = valid_boxes
-                artifact_crops = [None for _ in valid_boxes]
-                artifact_crop_rotations = [None for _ in valid_boxes]
-            else:
-                artifact_boxes = saved_boxes
-                artifact_crops = list(extracted_crops)
-                artifact_crop_rotations = list(crop_rotations)
-
-            if len(artifact_boxes) > 0:
-                save_split_artifacts(
-                    output_dir=split_save,
-                    source_name=source_name,
-                    source_image=detections.source_image,
-                    source_rotation_degrees=detections.source_rotation_degrees,
-                    detector_name=detections.detector_name,
-                    detector_version=detections.detector_version,
-                    overall_confidence=detected_conf,
-                    boxes=artifact_boxes,
-                    crops=artifact_crops,
-                    crop_rotations=artifact_crop_rotations,
-                )
-
-        if len(outputs) > 0:
-            return outputs
-        if is_low_confidence and low_conf_mode == "skip_save_layout":
-            raise ValueError(
-                "Skipped image because no plate regions met the extraction confidence threshold "
-                f"({detected_conf:.3f} < {split_min_confidence:.3f})"
-            )
-        if len(valid_boxes) == 0:
-            raise ValueError("No valid plate regions detected")
-        raise ValueError(
-            "No plate regions met the extraction confidence threshold "
-            f"({detected_conf:.3f} < {split_min_confidence:.3f})"
-        )
+        print(f"Processing {source_name} ...")
 
     t0 = perf_counter()
-    image = _read_image(image_file)
     image, _ = orient_crop(
         image,
         rotate=should_auto_landscape,
@@ -861,11 +586,11 @@ def gitter(
 
     if grid_save is not None and not _is_ref:
         im_rect = _draw_rect(fit[["xl", "xr", "yt", "yb"]], im_bw, color=(1.0, 0.647, 0.0))
-        out_grid = Path(grid_save) / f"gridded_{Path(image_file).name}"
+        out_grid = Path(grid_save) / f"gridded_{source_name}"
         skio.imsave(out_grid, util.img_as_ubyte(np.clip(im_rect, 0.0, 1.0)))
 
     if dat_save is not None and not _is_ref:
-        out_dat = Path(dat_save) / f"{Path(image_file).name}.dat"
+        out_dat = Path(dat_save) / f"{source_name}.dat"
         results["circularity"] = results["circularity"].round(4)
         results = results[["row", "col", "size", "circularity", "flags"]]
         results = gitter_write(results, out_dat)
@@ -873,7 +598,7 @@ def gitter(
     results.attrs["params"] = params
     results.attrs["elapsed"] = elapsed
     results.attrs["call"] = f"gitter({image_file!r})"
-    results.attrs["file"] = image_file
+    results.attrs["file"] = source_file if source_file is not None else source_name
     results.attrs["format"] = (plate_rows, plate_cols)
     return results
 
@@ -912,10 +637,6 @@ def gitter_batch(
     missing = [f for f in image_list if not Path(f).exists()]
     if missing:
         raise FileNotFoundError(f'Files do not exist: {", ".join(missing)}')
-
-    plate_detector = kwargs.get("plate_detector")
-    if plate_detector is not None and ref_image_file is not None:
-        raise ValueError("ref_image_file is not supported when plate_detector is provided")
 
     params = None
     if ref_image_file is not None:

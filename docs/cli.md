@@ -25,8 +25,8 @@ Common options:
 For single-plate images like `examples/extdata/sample.jpg`, the CLI runs direct
 quantification.
 
-For multi-plate images, use the Python API if you need split artifacts or
-control over detector-backed extraction.
+For multi-plate images, use the Python API with `PlateSplitter` first, then run
+`gitter(...)` on the extracted plate crops.
 
 ## `gitter batch`
 

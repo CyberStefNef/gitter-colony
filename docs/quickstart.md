@@ -24,8 +24,9 @@ fig.savefig("sample-heatmap.png", dpi=200)
 - `circularity`: morphology metric
 - `flags`: quality/edge warnings
 
-For multi-plate images, `gitter(...)` can also return a list of per-plate
-results when detector-backed extraction is active.
+`gitter(...)` is for single-plate images. For multi-plate images, split first
+with `PlateSplitter`, then quantify each extracted plate crop separately.
+It accepts either an image path or a `numpy.ndarray`.
 
 ## Optional CLI workflow
 

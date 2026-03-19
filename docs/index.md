@@ -15,7 +15,7 @@ quantification of pinned microbial colonies from plate images.
 ## What You Can Do
 
 - Quantify colony sizes from a single image (`gitter`)
-- Quantify multi-plate images with automatic plate detection
+- Split multi-plate images explicitly with `PlateSplitter`
 - Run batch quantification (`gitter_batch`)
 - Read/write DAT-style results (`gitter_read`, `gitter run --dat-save`)
 - Plot heatmap and bubble summaries (`plot_gitter`)

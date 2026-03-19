@@ -85,7 +85,6 @@ def parity_metrics() -> dict[str, float]:
         verbose="n",
         grid_save=None,
         dat_save=None,
-        _auto_plate_detector=False,
     )[["row", "col", "size", "circularity", "flags"]].copy()
     py["row"] = pd.to_numeric(py["row"], errors="raise").astype(int)
     py["col"] = pd.to_numeric(py["col"], errors="raise").astype(int)

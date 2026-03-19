@@ -76,13 +76,7 @@ def main(argv: list[str] | None = None) -> int:
             dat_save=args.dat_save,
             verbose=args.verbose,
         )
-        if isinstance(result, list):
-            for idx, plate_df in enumerate(result, start=1):
-                print(f"Plate {idx}")
-                print(summary_gitter(plate_df))
-                print()
-        else:
-            print(summary_gitter(result))
+        print(summary_gitter(result))
         return 0
 
     if args.command == "batch":

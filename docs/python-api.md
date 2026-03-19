@@ -2,17 +2,16 @@
 
 ## Main functions
 
-- `gitter`: quantify one image
+- `gitter`: quantify one single-plate image
 - `gitter_batch`: quantify many images
+- `PlateSplitter`: detect and extract plates from a multi-plate image
 - `gitter_read`: load DAT output
 - `plot_gitter`: visualize colony metrics
 - `plate_warnings`: plate-level warnings
 - `summary_gitter`: summary statistics
 
-`gitter(...)` returns:
-
-- a single `DataFrame` for single-plate inputs
-- a `list[DataFrame]` when detector-backed multi-plate extraction is used
+`gitter(...)` always returns a single `DataFrame`.
+It accepts either a file path or an in-memory `numpy.ndarray`.
 
 ## Single-image example
 
@@ -33,35 +32,58 @@ fig = plot_gitter(df, plot_type="heatmap", title="Sample")
 fig.savefig("sample.png", dpi=200)
 ```
 
-## Multi-plate split example (`PlateDetector` default when detector weights are available)
+## Multi-plate split example
 
 ```python
-from gitter_py import gitter
+from gitter_py import PlateSplitter, gitter
 
-plates = gitter(
-    image_file="examples/scanomatic/250417_saltLBtest_35_35_Bran_0060_37101.4909.tiff",
+splitter = PlateSplitter(min_confidence=0.95)
+result = splitter.split(
+    "examples/scanomatic/250417_saltLBtest_35_35_Bran_0060_37101.4909.tiff"
+)
+splitter.save(result, "split_save")
+
+plate_df = gitter(
+    image_file="split_save/250417_saltLBtest_35_35_Bran_0060_37101.4909.tiff__plate_01.tiff",
     plate_format=1536,
-    split_save="split_save",  # optional output directory
     verbose="n",
+    inverse=True,
+    autorotate=True,
     grid_save=None,
     dat_save=None,
 )
 
-for plate_idx, plate_df in enumerate(plates, start=1):
-    print(plate_idx, plate_df["size"].median())
+for plate in result.plates:
+    plate_df = gitter(
+        image_file=plate.crop,
+        plate_format=1536,
+        verbose="n",
+        inverse=True,
+        autorotate=True,
+        grid_save=None,
+        dat_save=None,
+    )
 ```
 
-By default, only detected plates with confidence `>= 0.95` are extracted and processed.
-If extracted plate crops are portrait-oriented, pass `autorotate=True` to rotate them
-to landscape before quantification.
+By default, only detected plates with confidence `>= 0.95` are extracted.
+If extracted plate crops are portrait-oriented, pass `autorotate=True` to `gitter(...)`
+to rotate them to landscape before you quantify them.
+For scanomatic-style crops, pass `inverse=True` to `gitter(...)` when needed.
 
-Useful attrs on detector-extracted results include:
+Useful `PlateSplitResult` fields include:
+
+- `plates`
+- `overall_confidence`
+- `detector_name`
+
+Each `ExtractedPlate` contains:
 
 - `plate_index`
-- `plate_confidence`
+- `confidence`
+- `bbox`
+- `polygon`
+- `crop`
 - `crop_rotation_degrees`
-- `plate_inverse`
-- `detector_name`
 
 ## Batch example
 

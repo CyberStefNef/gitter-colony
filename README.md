@@ -41,6 +41,10 @@ fig.savefig("sample.png", dpi=200)
 - `circularity`
 - `flags`
 
+`gitter(...)` is single-plate quantification only. If your source image contains
+multiple plates, split it explicitly first with `PlateSplitter`.
+It accepts either a file path or an in-memory `numpy.ndarray`.
+
 ## CLI (Optional)
 
 ```bash
@@ -49,35 +53,50 @@ gitter read sample.jpg.dat
 gitter plot sample.jpg.dat --plot-type heatmap --out sample.png
 ```
 
-## Multi-plate Detection
-
-`PlateDetector` is loaded automatically when detector weights are available and
-the input image contains multiple plates.
+## Multi-plate Splitting
 
 ```python
-from gitter_py import gitter
+from pathlib import Path
 
-plates = gitter(
-    image_file="examples/scanomatic/250417_saltLBtest_35_35_Bran_0060_37101.4909.tiff",
-    plate_format=1536,
-    split_save="split_save",
-    verbose="n",
-    grid_save=None,
-    dat_save=None,
+from gitter_py import PlateSplitter, gitter
+
+splitter = PlateSplitter(min_confidence=0.95)
+result = splitter.split(
+    "examples/scanomatic/250417_saltLBtest_35_35_Bran_0060_37101.4909.tiff"
 )
+splitter.save(result, "split_save")
 
-for plate_df in plates:
+for plate_file in sorted(Path("split_save").glob("*__plate_*.tiff")):
+    plate_df = gitter(
+        image_file=str(plate_file),
+        plate_format=1536,
+        verbose="n",
+        inverse=True,
+        autorotate=True,
+        grid_save=None,
+        dat_save=None,
+    )
+    print(plate_df["size"].median())
+
+for plate in result.plates:
+    plate_df = gitter(
+        image_file=plate.crop,
+        plate_format=1536,
+        verbose="n",
+        inverse=True,
+        autorotate=True,
+        grid_save=None,
+        dat_save=None,
+    )
     print(plate_df["size"].median())
 ```
 
-Detection behavior:
+Splitter behavior:
 
 - only plates with confidence `>= 0.95` are extracted by default
-- set `autorotate=True` to rotate portrait plate crops to landscape before quantification
-- pass `split_save="some_dir"` to save layout and split artifacts
-
-If you want the legacy single-image quantification path on a file like
-`examples/extdata/sample.jpg`, use the image directly without split outputs.
+- set `autorotate=True` on `gitter(...)` to rotate portrait plate crops before quantification
+- call `splitter.save(...)` to write layout and crop artifacts
+- for scanomatic-style crops, pass `inverse=True` to `gitter(...)` when needed
 
 ## R Parity Tests (Optional)
 

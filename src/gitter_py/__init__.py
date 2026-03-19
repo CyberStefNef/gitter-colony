@@ -6,6 +6,9 @@ __all__ = [
     "PlateDetector",
     "PlateBox",
     "PlateDetections",
+    "PlateSplitter",
+    "PlateSplitResult",
+    "ExtractedPlate",
     "gitter",
     "gitter_batch",
     "gitter_read",
@@ -18,7 +21,9 @@ __all__ = [
 if TYPE_CHECKING:
     from .core import gitter, gitter_batch
     from .io import gitter_read, plate_warnings, summary_gitter
-    from .plate_detection import PlateBox, PlateDetections, PlateDetector
+    from .plate_detection import PlateDetector
+    from .plate_splitter import PlateSplitter
+    from .plate_types import ExtractedPlate, PlateBox, PlateDetections, PlateSplitResult
     from .plotting import plot_gitter
 
 
@@ -35,13 +40,25 @@ def __getattr__(name: str):
             "plate_warnings": plate_warnings,
             "summary_gitter": summary_gitter,
         }[name]
-    if name in {"PlateDetector", "PlateBox", "PlateDetections"}:
-        from .plate_detection import PlateBox, PlateDetections, PlateDetector
+    if name in {
+        "PlateDetector",
+        "PlateBox",
+        "PlateDetections",
+        "PlateSplitter",
+        "PlateSplitResult",
+        "ExtractedPlate",
+    }:
+        from .plate_detection import PlateDetector
+        from .plate_splitter import PlateSplitter
+        from .plate_types import ExtractedPlate, PlateBox, PlateDetections, PlateSplitResult
 
         return {
             "PlateDetector": PlateDetector,
             "PlateBox": PlateBox,
             "PlateDetections": PlateDetections,
+            "PlateSplitter": PlateSplitter,
+            "PlateSplitResult": PlateSplitResult,
+            "ExtractedPlate": ExtractedPlate,
         }[name]
     if name == "plot_gitter":
         from .plotting import plot_gitter

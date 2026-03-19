@@ -14,7 +14,6 @@ def test_gitter_sample_image_smoke():
         verbose="n",
         grid_save=None,
         dat_save=None,
-        _auto_plate_detector=False,
     )
     assert {"row", "col", "size", "circularity", "flags"}.issubset(df.columns)
     assert len(df) == 32 * 48
