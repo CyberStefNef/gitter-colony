@@ -78,7 +78,8 @@ def _resolve_model_paths(model_bundle: str | Path) -> tuple[Path | None, Path]:
         return metadata_path if metadata_path.exists() else None, path
 
     raise ValueError(
-        f"Unsupported detector model path: {path}. Expected a model directory, metadata.json, or .pt weights."
+        "Unsupported detector model path: "
+        f"{path}. Expected a model directory, metadata.json, or .pt weights."
     )
 
 
@@ -271,7 +272,12 @@ def _refine_plate_polygon(
             center_distance = float(np.linalg.norm(center - target_center) / max(target_diag, 1.0))
             fill_ratio = contour_area / max(rect_area, 1.0)
             size_penalty = abs(np.log(max(rect_area, 1.0) / target_area))
-            score = (2.2 * iou) + (0.45 * fill_ratio) - (0.35 * center_distance) - (0.2 * size_penalty)
+            score = (
+                (2.2 * iou)
+                + (0.45 * fill_ratio)
+                - (0.35 * center_distance)
+                - (0.2 * size_penalty)
+            )
             if score > best_score:
                 best_score = score
                 best_polygon = global_polygon
@@ -418,7 +424,8 @@ class PlateDetector:
                 model_kind = YOLO_MODEL_KIND
             else:
                 raise ValueError(
-                    f"Unsupported detector bundle model_kind={model_kind!r}; expected {YOLO_MODEL_KIND!r}"
+                    "Unsupported detector bundle "
+                    f"model_kind={model_kind!r}; expected {YOLO_MODEL_KIND!r}"
                 )
         if not weights_path.exists():
             raise ValueError(f"Detector weights do not exist: {weights_path}")
@@ -469,7 +476,11 @@ class PlateDetector:
         xyxy = _as_numpy(getattr(boxes_obj, "xyxy", None)).reshape(-1, 4)
         conf = _as_numpy(getattr(boxes_obj, "conf", None)).reshape(-1)
         cls = _as_numpy(getattr(boxes_obj, "cls", None)).reshape(-1)
-        names = getattr(result, "names", None) or getattr(self.model, "names", None) or self.class_names
+        names = (
+            getattr(result, "names", None)
+            or getattr(self.model, "names", None)
+            or self.class_names
+        )
 
         src_h, src_w = image.shape[:2]
         scored_boxes: list[PlateBox] = []
@@ -513,7 +524,11 @@ class PlateDetector:
                 )
             )
 
-        scored_boxes = sorted(scored_boxes, key=lambda box: box.confidence, reverse=True)[: self.max_plates]
+        scored_boxes = sorted(
+            scored_boxes,
+            key=lambda box: box.confidence,
+            reverse=True,
+        )[: self.max_plates]
         ordered_boxes = sorted(scored_boxes, key=lambda box: (box.y_min, box.x_min))
         overall_confidence = max((box.confidence for box in ordered_boxes), default=0.0)
         return PlateDetections(

@@ -19,9 +19,9 @@ from .io import gitter_write
 from .peaks import colony_peaks, colony_peaks_fixed, round_odd, split_half
 from .plate_crops import orient_crop, validate_rotate_override
 from .plate_detection import (
+    PlateBox,
     PlateDetections,
     PlateDetector,
-    PlateBox,
     _to_saveable_u8,
     extract_plate_crop,
     save_split_artifacts,
