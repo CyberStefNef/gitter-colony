@@ -24,6 +24,9 @@ fig.savefig("sample-heatmap.png", dpi=200)
 - `circularity`: morphology metric
 - `flags`: quality/edge warnings
 
+For multi-plate images, `gitter(...)` can also return a list of per-plate
+results when detector-backed extraction is active.
+
 ## Optional CLI workflow
 
 ```bash

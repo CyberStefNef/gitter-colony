@@ -22,6 +22,12 @@ Common options:
 - `--fast INT`
 - `--verbose l|p|n`
 
+For single-plate images like `examples/extdata/sample.jpg`, the CLI runs direct
+quantification.
+
+For multi-plate images, use the Python API if you need split artifacts or
+control over detector-backed extraction.
+
 ## `gitter batch`
 
 Process a directory or multiple files.

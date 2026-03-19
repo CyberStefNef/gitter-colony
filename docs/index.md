@@ -15,10 +15,11 @@ quantification of pinned microbial colonies from plate images.
 ## What You Can Do
 
 - Quantify colony sizes from a single image (`gitter`)
+- Quantify multi-plate images with automatic plate detection
 - Run batch quantification (`gitter_batch`)
 - Read/write DAT-style results (`gitter_read`, `gitter run --dat-save`)
 - Plot heatmap and bubble summaries (`plot_gitter`)
-- Validate parity against original R output (static + live Docker tests)
+- Validate biological agreement against original R output (static + live Docker tests)
 
 ## Links
 

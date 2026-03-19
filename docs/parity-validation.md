@@ -5,6 +5,11 @@ This project includes two parity layers against the original R implementation:
 - Static baseline parity (`sample.jpg.dat`)
 - Live R parity via Docker (`r_live` test)
 
+The acceptance thresholds are intentionally based on biological agreement rather
+than exact low-level equality. Python and R use different image-processing
+libraries, so exact colony masks are not expected to be identical even when the
+grids and scientific conclusions match closely.
+
 ## Live parity test
 
 Build the pinned R image:
@@ -30,14 +35,21 @@ Override defaults with:
 - `GITTER_R_SOURCE_REF`
 - `GITTER_R_SOURCE_DIR` (use a local checkout and skip network fetch)
 
-## Current sample parity (live R vs Python)
+The retained parity coverage is:
 
-- `size_mae`: `0.01171875`
-- `size_corr`: `0.9999994939`
-- `circularity_mae`: `0.0002680782`
-- `circularity_corr`: `0.9990531310`
-- `flag_precision`: `1.0`
-- `flag_recall`: `1.0`
-- `flag_exact_match`: `1.0`
+- `tests/test_parity_r_sample.py`: static sample baseline against `sample.jpg.dat`
+- `tests/test_parity_r_live.py`: live Docker comparison against the R code
 
-Values are measured on `examples/extdata/sample.jpg`.
+## Release thresholds
+
+Both parity tests currently require:
+
+- `size_corr >= 0.999`
+- `size_mae <= 2.0`
+- `size_p99_abs_err <= 20.0`
+- `circularity_mae <= 0.06`
+- `circularity_p99_abs_err <= 0.20`
+- `circularity_corr >= 0.88`
+- `flag_precision >= 0.95`
+- `flag_recall >= 0.95`
+- `flag_exact_match >= 0.995`

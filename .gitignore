@@ -7,3 +7,13 @@ __pycache__/
 .cache/
 site/
 r_gitter/
+examples/scanomatic/
+examples/extdata/image.png
+examples/extdata/image.json
+examples/extdata/sample.json
+examples/extdata/sample_dead.json
+models/plate_detector_general/labels/
+models/plate_detector_general/manual_seed/
+models/plate_detector_general/model/
+models/plate_detector_scanomatic/labels/
+models/plate_detector_scanomatic/model/
