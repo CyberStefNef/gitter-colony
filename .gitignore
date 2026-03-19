@@ -7,6 +7,8 @@ __pycache__/
 .cache/
 site/
 r_gitter/
+AGENTS.md
+dist/
 examples/scanomatic/
 examples/extdata/image.png
 examples/extdata/image.json
