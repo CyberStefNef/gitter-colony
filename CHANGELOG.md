@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/CyberStefNef/gitter-colony/compare/gitter-colony-v1.2.1...gitter-colony-v1.3.0) (2026-03-23)
+
+
+### Features
+
+* add plate detector workflow and relax R parity checks ([7ef9855](https://github.com/CyberStefNef/gitter-colony/commit/7ef985511e1f6e9e21598fde32036fb0c30b4994))
+
+
+### Bug Fixes
+
+* satisfy lint checks and sync lockfile version ([c2533b5](https://github.com/CyberStefNef/gitter-colony/commit/c2533b542bc9d7e60d55f74c7c182d058829e448))
+
 ## [1.2.1](https://github.com/CyberStefNef/gitter-colony/compare/gitter-colony-v1.2.0...gitter-colony-v1.2.1) (2026-03-03)
 
 
