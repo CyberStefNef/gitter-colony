@@ -3,7 +3,7 @@
 ## Python workflow (recommended)
 
 ```python
-from gitter_py import gitter, plot_gitter
+from gitter_py import gitter, plot_results
 
 df = gitter(
     image_file="examples/extdata/sample.jpg",
@@ -13,7 +13,7 @@ df = gitter(
 
 print(df[["row", "col", "size", "circularity", "flags"]].head())
 
-fig = plot_gitter(df, plot_type="heatmap", title="Sample plate")
+fig = plot_results(df, kind="heatmap", title="Sample plate")
 fig.savefig("sample-heatmap.png", dpi=200)
 ```
 
@@ -31,9 +31,9 @@ It accepts either an image path or a `numpy.ndarray`.
 ## Optional CLI workflow
 
 ```bash
-gitter run examples/extdata/sample.jpg --plate-format 1536 --grid-save . --dat-save .
-gitter read sample.jpg.dat
-gitter plot sample.jpg.dat --plot-type heatmap --out sample-heatmap.png
+gitter run examples/extdata/sample.jpg --plate-format 1536 --out sample.csv
+gitter read sample.csv
+gitter plot sample.csv --plot-type heatmap --out sample-heatmap.png
 ```
 
 If `gitter` is not on your PATH, use `uv run gitter ...` instead.

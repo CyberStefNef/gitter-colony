@@ -14,7 +14,6 @@ from skimage import io as skio
 from skimage import morphology, transform, util
 
 from .constants import GITTER_VERSION, PLATE_FORMATS
-from .io import gitter_write
 from .peaks import colony_peaks, colony_peaks_fixed, round_odd, split_half
 from .plate_crops import orient_crop, validate_rotate_override
 
@@ -436,8 +435,6 @@ def gitter(
     contrast: int | None = None,
     fast: int | None = None,
     plot: bool = False,
-    grid_save: str | None = ".",
-    dat_save: str | None = ".",
     start_coords: tuple[float, float] | list[float] | None = None,
     increment_coords: tuple[float, float] | list[float] | None = None,
     dilation_factor: int = 0,
@@ -469,10 +466,6 @@ def gitter(
     should_auto_landscape = bool(autorotate or rotate)
 
     plate_rows, plate_cols = _parse_plate_format(plate_format)
-    if grid_save is not None and not Path(grid_save).is_dir():
-        raise ValueError(f'Invalid gridded directory "{grid_save}"')
-    if dat_save is not None and not Path(dat_save).is_dir():
-        raise ValueError(f'Invalid dat directory "{dat_save}"')
     image, source_name, source_file = _coerce_image_input(image_file)
     if source_name.startswith("gridded_"):
         LOGGER.warning("Detected gridded image as input")
@@ -584,16 +577,7 @@ def gitter(
 
     elapsed = round(perf_counter() - t0, 5)
 
-    if grid_save is not None and not _is_ref:
-        im_rect = _draw_rect(fit[["xl", "xr", "yt", "yb"]], im_bw, color=(1.0, 0.647, 0.0))
-        out_grid = Path(grid_save) / f"gridded_{source_name}"
-        skio.imsave(out_grid, util.img_as_ubyte(np.clip(im_rect, 0.0, 1.0)))
-
-    if dat_save is not None and not _is_ref:
-        out_dat = Path(dat_save) / f"{source_name}.dat"
-        results["circularity"] = results["circularity"].round(4)
-        results = results[["row", "col", "size", "circularity", "flags"]]
-        results = gitter_write(results, out_dat)
+    results = results[["row", "col", "size", "circularity", "flags"]]
 
     results.attrs["params"] = params
     results.attrs["elapsed"] = elapsed

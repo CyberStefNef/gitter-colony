@@ -6,8 +6,8 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 
 from .core import gitter, gitter_batch
-from .io import gitter_read, summary_gitter
-from .plotting import plot_gitter
+from .io import read_results_csv, summary_gitter, write_results_csv
+from .plotting import plot_results
 
 
 def _plate_format(value: str):
@@ -31,8 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--inverse", action="store_true")
     run.add_argument("--contrast", type=int, default=None)
     run.add_argument("--fast", type=int, default=None)
-    run.add_argument("--grid-save", default=".")
-    run.add_argument("--dat-save", default=".")
+    run.add_argument("--out", default=None, help="Optional CSV output path")
     run.add_argument("--verbose", choices=["l", "p", "n"], default="l")
 
     batch = sub.add_parser("batch", help="Process a batch of images")
@@ -43,15 +42,13 @@ def build_parser() -> argparse.ArgumentParser:
     batch.add_argument("--inverse", action="store_true")
     batch.add_argument("--contrast", type=int, default=None)
     batch.add_argument("--fast", type=int, default=None)
-    batch.add_argument("--grid-save", default=".")
-    batch.add_argument("--dat-save", default=".")
     batch.add_argument("--verbose", choices=["l", "p", "n"], default="l")
 
-    read = sub.add_parser("read", help="Read and summarize a DAT file")
-    read.add_argument("dat_file")
+    read = sub.add_parser("read", help="Read and summarize a CSV results file")
+    read.add_argument("csv_file")
 
-    plot = sub.add_parser("plot", help="Plot a DAT file")
-    plot.add_argument("dat_file")
+    plot = sub.add_parser("plot", help="Plot a CSV results file")
+    plot.add_argument("csv_file")
     plot.add_argument("--plot-type", choices=["heatmap", "bubble"], default="heatmap")
     plot.add_argument("--title", default="")
     plot.add_argument("--out", default=None)
@@ -72,10 +69,10 @@ def main(argv: list[str] | None = None) -> int:
             inverse=args.inverse,
             contrast=args.contrast,
             fast=args.fast,
-            grid_save=args.grid_save,
-            dat_save=args.dat_save,
             verbose=args.verbose,
         )
+        if args.out:
+            write_results_csv(result, args.out)
         print(summary_gitter(result))
         return 0
 
@@ -89,20 +86,18 @@ def main(argv: list[str] | None = None) -> int:
             inverse=args.inverse,
             contrast=args.contrast,
             fast=args.fast,
-            grid_save=args.grid_save,
-            dat_save=args.dat_save,
             verbose=args.verbose,
         )
         return 0
 
     if args.command == "read":
-        dat = gitter_read(args.dat_file)
-        print(summary_gitter(dat))
+        df = read_results_csv(args.csv_file)
+        print(summary_gitter(df))
         return 0
 
     if args.command == "plot":
-        dat = gitter_read(args.dat_file)
-        fig = plot_gitter(dat, title=args.title, plot_type=args.plot_type)
+        df = read_results_csv(args.csv_file)
+        fig = plot_results(df, title=args.title, kind=args.plot_type)
         if args.out:
             Path(args.out).parent.mkdir(parents=True, exist_ok=True)
             fig.savefig(args.out, dpi=200, bbox_inches="tight")

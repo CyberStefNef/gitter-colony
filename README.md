@@ -21,7 +21,7 @@ uv add gitter-colony
 ## Python Usage
 
 ```python
-from gitter_py import gitter, plot_gitter
+from gitter_py import gitter, plot_results
 
 df = gitter(
     image_file="examples/extdata/sample.jpg",
@@ -29,7 +29,7 @@ df = gitter(
     verbose="n",
 )
 
-fig = plot_gitter(df, plot_type="heatmap", title="Sample")
+fig = plot_results(df, kind="heatmap", title="Sample")
 fig.savefig("sample.png", dpi=200)
 ```
 
@@ -48,9 +48,9 @@ It accepts either a file path or an in-memory `numpy.ndarray`.
 ## CLI (Optional)
 
 ```bash
-gitter run examples/extdata/sample.jpg --plate-format 1536 --grid-save . --dat-save .
-gitter read sample.jpg.dat
-gitter plot sample.jpg.dat --plot-type heatmap --out sample.png
+gitter run examples/extdata/sample.jpg --plate-format 1536 --out sample.csv
+gitter read sample.csv
+gitter plot sample.csv --plot-type heatmap --out sample.png
 ```
 
 ## Multi-plate Splitting
@@ -73,8 +73,6 @@ for plate_file in sorted(Path("split_save").glob("*__plate_*.tiff")):
         verbose="n",
         inverse=True,
         autorotate=True,
-        grid_save=None,
-        dat_save=None,
     )
     print(plate_df["size"].median())
 
@@ -85,8 +83,6 @@ for plate in result.plates:
         verbose="n",
         inverse=True,
         autorotate=True,
-        grid_save=None,
-        dat_save=None,
     )
     print(plate_df["size"].median())
 ```

@@ -5,8 +5,9 @@
 - `gitter`: quantify one single-plate image
 - `gitter_batch`: quantify many images
 - `PlateSplitter`: detect and extract plates from a multi-plate image
-- `gitter_read`: load DAT output
-- `plot_gitter`: visualize colony metrics
+- `read_results_csv`: load CSV output
+- `write_results_csv`: save CSV output
+- `plot_results`: visualize colony metrics
 - `plate_warnings`: plate-level warnings
 - `summary_gitter`: summary statistics
 
@@ -16,19 +17,17 @@ It accepts either a file path or an in-memory `numpy.ndarray`.
 ## Single-image example
 
 ```python
-from gitter_py import gitter, plot_gitter, plate_warnings
+from gitter_py import gitter, plot_results, plate_warnings
 
 df = gitter(
     image_file="examples/extdata/sample.jpg",
     plate_format=1536,
     verbose="n",
-    grid_save=None,
-    dat_save=None,
 )
 
 print(plate_warnings(df))
 
-fig = plot_gitter(df, plot_type="heatmap", title="Sample")
+fig = plot_results(df, kind="heatmap", title="Sample")
 fig.savefig("sample.png", dpi=200)
 ```
 
@@ -49,8 +48,6 @@ plate_df = gitter(
     verbose="n",
     inverse=True,
     autorotate=True,
-    grid_save=None,
-    dat_save=None,
 )
 
 for plate in result.plates:
@@ -60,8 +57,6 @@ for plate in result.plates:
         verbose="n",
         inverse=True,
         autorotate=True,
-        grid_save=None,
-        dat_save=None,
     )
 ```
 
@@ -111,3 +106,13 @@ Each result row represents one colony position and includes:
 - `flags`
 
 Metadata is available in `df.attrs` (for example `elapsed`, `format`, `file`).
+
+## CSV export example
+
+```python
+from gitter_py import gitter, read_results_csv, write_results_csv
+
+df = gitter("examples/extdata/sample.jpg", plate_format=1536, verbose="n")
+write_results_csv(df, "sample.csv")
+loaded = read_results_csv("sample.csv")
+```

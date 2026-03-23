@@ -2,7 +2,7 @@
 
 This project includes two parity layers against the original R implementation:
 
-- Static baseline parity (`sample.jpg.dat`)
+- Static baseline parity (`sample.jpg.dat` fixture only)
 - Live R parity via Docker (`r_live` test)
 
 The acceptance thresholds are intentionally based on biological agreement rather
@@ -37,7 +37,7 @@ Override defaults with:
 
 The retained parity coverage is:
 
-- `tests/test_parity_r_sample.py`: static sample baseline against `sample.jpg.dat`
+- `tests/test_parity_r_sample.py`: static sample baseline against the bundled R fixture `sample.jpg.dat`
 - `tests/test_parity_r_live.py`: live Docker comparison against the R code
 
 ## Release thresholds

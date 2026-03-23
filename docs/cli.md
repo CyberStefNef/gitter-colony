@@ -10,7 +10,7 @@ If `gitter` is not on your PATH, prefix commands with `uv run`.
 Process one image.
 
 ```bash
-gitter run IMAGE.jpg --plate-format 1536 --grid-save . --dat-save .
+gitter run IMAGE.jpg --plate-format 1536 --out results.csv
 ```
 
 Common options:
@@ -38,16 +38,16 @@ gitter batch examples/extdata --ref-image-file examples/extdata/sample.jpg
 
 ## `gitter read`
 
-Show a DAT summary.
+Show a CSV results summary.
 
 ```bash
-gitter read sample.jpg.dat
+gitter read sample.csv
 ```
 
 ## `gitter plot`
 
-Plot DAT results.
+Plot CSV results.
 
 ```bash
-gitter plot sample.jpg.dat --plot-type heatmap --out sample.png
+gitter plot sample.csv --plot-type heatmap --out sample.png
 ```

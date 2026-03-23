@@ -253,8 +253,6 @@ def test_parity_live_r_docker(tmp_path: Path):
             str(repo_root / "examples/extdata/sample.jpg"),
             plate_format=1536,
             verbose="n",
-            grid_save=None,
-            dat_save=None,
         )[["row", "col", "size", "circularity", "flags"]].copy()
         py["row"] = pd.to_numeric(py["row"], errors="raise").astype(int)
         py["col"] = pd.to_numeric(py["col"], errors="raise").astype(int)

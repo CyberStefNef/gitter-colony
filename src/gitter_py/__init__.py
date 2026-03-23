@@ -11,20 +11,24 @@ __all__ = [
     "ExtractedPlate",
     "gitter",
     "gitter_batch",
-    "gitter_read",
+    "read_results_csv",
+    "write_results_csv",
     "plate_warnings",
+    "plot_results",
     "plot_gitter",
+    "render_grid_overlay",
+    "save_grid_overlay",
     "summary_gitter",
 ]
 
 
 if TYPE_CHECKING:
     from .core import gitter, gitter_batch
-    from .io import gitter_read, plate_warnings, summary_gitter
+    from .io import plate_warnings, read_results_csv, summary_gitter, write_results_csv
     from .plate_detection import PlateDetector
     from .plate_splitter import PlateSplitter
     from .plate_types import ExtractedPlate, PlateBox, PlateDetections, PlateSplitResult
-    from .plotting import plot_gitter
+    from .plotting import plot_gitter, plot_results, render_grid_overlay, save_grid_overlay
 
 
 def __getattr__(name: str):
@@ -32,11 +36,12 @@ def __getattr__(name: str):
         from .core import gitter, gitter_batch
 
         return {"gitter": gitter, "gitter_batch": gitter_batch}[name]
-    if name in {"gitter_read", "plate_warnings", "summary_gitter"}:
-        from .io import gitter_read, plate_warnings, summary_gitter
+    if name in {"read_results_csv", "write_results_csv", "plate_warnings", "summary_gitter"}:
+        from .io import plate_warnings, read_results_csv, summary_gitter, write_results_csv
 
         return {
-            "gitter_read": gitter_read,
+            "read_results_csv": read_results_csv,
+            "write_results_csv": write_results_csv,
             "plate_warnings": plate_warnings,
             "summary_gitter": summary_gitter,
         }[name]
@@ -60,8 +65,13 @@ def __getattr__(name: str):
             "PlateSplitResult": PlateSplitResult,
             "ExtractedPlate": ExtractedPlate,
         }[name]
-    if name == "plot_gitter":
-        from .plotting import plot_gitter
+    if name in {"plot_results", "plot_gitter", "render_grid_overlay", "save_grid_overlay"}:
+        from .plotting import plot_gitter, plot_results, render_grid_overlay, save_grid_overlay
 
-        return plot_gitter
+        return {
+            "plot_results": plot_results,
+            "plot_gitter": plot_gitter,
+            "render_grid_overlay": render_grid_overlay,
+            "save_grid_overlay": save_grid_overlay,
+        }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

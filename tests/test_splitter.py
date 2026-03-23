@@ -86,8 +86,6 @@ def test_gitter_accepts_split_crop_arrays_directly():
         image,
         plate_format=1536,
         verbose="n",
-        grid_save=None,
-        dat_save=None,
     )
 
     assert len(df) == 1536
